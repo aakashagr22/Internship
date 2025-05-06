@@ -1,0 +1,163 @@
+.doctorCard {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.doctorCardContent {
+  display: flex;
+  flex-direction: column;
+}
+
+.doctorImageContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.imageWrapper {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin-bottom: 0.5rem;
+}
+
+.doctorImage {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.doctorRating {
+  display: flex;
+  align-items: center;
+}
+
+.starIcon {
+  color: #f8c51c;
+  margin-right: 0.25rem;
+}
+
+.ratingValue {
+  font-weight: 600;
+  margin-right: 0.25rem;
+}
+
+.reviewCount {
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.doctorInfo {
+  margin-bottom: 1rem;
+}
+
+.doctorName {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.doctorSpecialty,
+.doctorQualification,
+.doctorExperience {
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+
+.doctorLanguages {
+  color: #666;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.doctorLocation {
+  display: flex;
+  align-items: center;
+  color: #666;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.locationIcon {
+  margin-right: 0.5rem;
+  color: #6b46c1;
+}
+
+.appointmentOptions {
+  display: flex;
+  flex-direction: column;
+}
+
+.feeContainer {
+  margin-bottom: 1rem;
+}
+
+.consultationFee {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.feeLabel {
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.availabilityInfo {
+  margin-bottom: 1rem;
+}
+
+.availabilityItem {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.availabilityIcon {
+  color: #6b46c1;
+  margin-right: 0.5rem;
+}
+
+.availabilityText {
+  font-size: 0.875rem;
+}
+
+.bookButton {
+  background-color: #6b46c1;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.bookButton:hover {
+  background-color: #553c9a;
+}
+
+@media (min-width: 768px) {
+  .doctorCardContent {
+    flex-direction: row;
+  }
+
+  .doctorImageContainer {
+    width: 25%;
+    margin-bottom: 0;
+  }
+
+  .doctorInfo {
+    width: 50%;
+    padding: 0 1rem;
+    margin-bottom: 0;
+  }
+
+  .appointmentOptions {
+    width: 25%;
+    justify-content: space-between;
+  }
+}

@@ -1,0 +1,64 @@
+.pageHeader {
+  margin-bottom: 1.5rem;
+  padding-top: 2rem;
+}
+
+.pageTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.pageDescription {
+  color: #666;
+}
+
+.pageContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-bottom: 2rem;
+}
+
+.doctorsCount {
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.noResults {
+  text-align: center;
+  padding: 3rem;
+}
+
+.noResultsMessage {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.noResultsHint {
+  color: #666;
+}
+
+@media (min-width: 768px) {
+  .pageContent {
+    flex-direction: row;
+  }
+
+  .filtersSidebar {
+    width: 25%;
+  }
+
+  .doctorsList {
+    width: 75%;
+  }
+}
