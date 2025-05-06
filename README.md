@@ -19,7 +19,7 @@ A Next.js clone of Apollo247's doctor listing page with MongoDB integration and 
 1. **Clone the repository**
 
 \`\`\`bash
-git clone https://github.com/yourusername/apollo247-clone.git
+git clone https://github.com/aakashagr22/internship.git
 cd apollo247-clone
 \`\`\`
 
@@ -38,19 +38,13 @@ MONGODB_URI=your_mongodb_connection_string
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
 \`\`\`
 
-4. **Seed the database**
-
-\`\`\`bash
-npm run seed
-\`\`\`
-
-5. **Run the development server**
+4.  **Run the development server**
 
 \`\`\`bash
 npm run dev
 \`\`\`
 
-6. **Open the application**
+5. **Open the application**
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 

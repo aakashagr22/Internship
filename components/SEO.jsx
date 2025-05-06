@@ -40,7 +40,7 @@ export default function SEO({
     "@context": "https://schema.org",
     "@type": "MedicalBusiness",
     "name": "Apollo 247 Clone",
-    "url": canonical || "https://yoursite.com",
+    "url": canonical || "https://onlineconsultt.onrender.com/specialties/general-physician-internal-medicine#",
     "department": {
       "@type": "MedicalSpecialty",
       "name": specialty || "General Physician"

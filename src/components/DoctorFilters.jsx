@@ -1,249 +1,262 @@
-"use client"
+// filepath: c:\Users\aakas\Downloads\Redux\doc\doc3\onlineconsult\src\components\DoctorFilters.jsx
+"use client";
 
-import { useState, useEffect } from "react"
-import { useSearchParams } from "react-router-dom"
-import { FaFilter, FaChevronDown, FaChevronUp } from "react-icons/fa"
-import "./DoctorFilters.css"
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FaFilter, FaChevronDown, FaChevronUp } from "react-icons/fa";
+import "./DoctorFilters.css";
 
 const DoctorFilters = ({ onFilterChange }) => {
-  const [searchParams] = useSearchParams()
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Safely get search params with defaults
+  const getSafeParam = useCallback((param) => {
+    try {
+      return searchParams?.get(param) || "";
+    } catch {
+      return "";
+    }
+  }, [searchParams]);
 
   const [filters, setFilters] = useState({
-    specialty: searchParams.get("specialty") || "general-physician-internal-medicine",
-    gender: searchParams.get("gender") || "",
-    experience: searchParams.get("experience") || "",
-    availability: searchParams.get("availability") || "",
-    sortBy: searchParams.get("sortBy") || "rating",
-    sortOrder: searchParams.get("sortOrder") || "desc",
-  })
+    specialty: getSafeParam("specialty") || "general-physician-internal-medicine",
+    gender: getSafeParam("gender"),
+    experience: getSafeParam("experience"),
+    availability: getSafeParam("availability"),
+    sortBy: getSafeParam("sortBy") || "rating",
+    sortOrder: getSafeParam("sortOrder") || "desc",
+  });
 
-  const [expanded, setExpanded] = useState({
-    gender: true,
-    experience: true,
-    availability: true,
-    sortBy: true,
-  })
+  const [activeSections, setActiveSections] = useState({
+    specialty: true,
+    gender: false,
+    experience: false,
+    availability: false,
+    sort: false,
+  });
 
   const toggleSection = (section) => {
-    setExpanded((prev) => ({
+    setActiveSections((prev) => ({
       ...prev,
       [section]: !prev[section],
-    }))
-  }
-
-  const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({
-      ...prev,
-      [key]: value,
-    }))
-  }
+    }));
+  };
 
   useEffect(() => {
-    onFilterChange(filters)
-  }, [filters, onFilterChange])
+    onFilterChange?.(filters);
+  }, [filters, onFilterChange]);
+
+  const handleFilterChange = useCallback(
+    (key, value) => {
+      setFilters((prevFilters) => {
+        const newFilters = {
+          ...prevFilters,
+          [key]: value,
+        };
+
+        // Construct the new URL
+        const newQuery = Object.entries(newFilters)
+          .filter(([, value]) => value !== "") // Remove empty values
+          .map(([key, value]) => `${key}=${value}`)
+          .join("&");
+
+        // Safely get the current pathname
+        const pathname = router.pathname || "/specialties/general-physician-internal-medicine"; // Provide a default
+
+        const newUrl = `${pathname}?${newQuery}`;
+
+        try {
+          router.push(newUrl, {
+            scroll: false,
+            shallow: true,
+          });
+        } catch (error) {
+          console.error("Navigation error:", error);
+        }
+
+        return newFilters; // Update the state
+      });
+    },
+    [router]
+  );
 
   return (
-    <div className="filters-container">
-      <div className="filters-header">
-        <h2 className="filters-title">
-          <FaFilter className="filters-icon" />
-          Filters
-        </h2>
+    <div className="doctor-filters">
+      <div className="filter-header">
+        <FaFilter className="filter-icon" />
+        <h3>Filters</h3>
+      </div>
+
+      {/* Specialty Filter */}
+      <div className="filter-section">
+        <div
+          className="filter-section-header"
+          onClick={() => toggleSection("specialty")}
+          aria-expanded={activeSections.specialty}
+        >
+          <h4>Specialty</h4>
+          {activeSections.specialty ? <FaChevronUp /> : <FaChevronDown />}
+        </div>
+        {activeSections.specialty && (
+          <div className="filter-options">
+            <select
+              value={filters.specialty}
+              onChange={(e) => handleFilterChange("specialty", e.target.value)}
+              aria-label="Select doctor specialty"
+            >
+              <option value="general-physician-internal-medicine">General Physician</option>
+              <option value="cardiologist">Cardiologist</option>
+              <option value="dermatologist">Dermatologist</option>
+              <option value="pediatrician">Pediatrician</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Gender Filter */}
       <div className="filter-section">
-        <div className="filter-header" onClick={() => toggleSection("gender")}>
-          <h3 className="filter-title">Gender</h3>
-          {expanded.gender ? <FaChevronUp /> : <FaChevronDown />}
+        <div
+          className="filter-section-header"
+          onClick={() => toggleSection("gender")}
+          aria-expanded={activeSections.gender}
+        >
+          <h4>Gender</h4>
+          {activeSections.gender ? <FaChevronUp /> : <FaChevronDown />}
         </div>
-
-        {expanded.gender && (
+        {activeSections.gender && (
           <div className="filter-options">
-            <label className="filter-option">
+            <label>
               <input
                 type="radio"
                 name="gender"
-                value=""
-                checked={filters.gender === ""}
-                onChange={() => handleFilterChange("gender", "")}
-              />
-              All
-            </label>
-            <label className="filter-option">
-              <input
-                type="radio"
-                name="gender"
-                value="Male"
-                checked={filters.gender === "Male"}
-                onChange={() => handleFilterChange("gender", "Male")}
+                value="male"
+                checked={filters.gender === "male"}
+                onChange={() => handleFilterChange("gender", "male")}
               />
               Male
             </label>
-            <label className="filter-option">
+            <label>
               <input
                 type="radio"
                 name="gender"
-                value="Female"
-                checked={filters.gender === "Female"}
-                onChange={() => handleFilterChange("gender", "Female")}
+                value="female"
+                checked={filters.gender === "female"}
+                onChange={() => handleFilterChange("gender", "female")}
               />
               Female
             </label>
+            <button
+              className="clear-filter"
+              onClick={() => handleFilterChange("gender", "")}
+            >
+              Clear
+            </button>
           </div>
         )}
       </div>
 
       {/* Experience Filter */}
       <div className="filter-section">
-        <div className="filter-header" onClick={() => toggleSection("experience")}>
-          <h3 className="filter-title">Experience</h3>
-          {expanded.experience ? <FaChevronUp /> : <FaChevronDown />}
+        <div
+          className="filter-section-header"
+          onClick={() => toggleSection("experience")}
+          aria-expanded={activeSections.experience}
+        >
+          <h4>Experience</h4>
+          {activeSections.experience ? <FaChevronUp /> : <FaChevronDown />}
         </div>
-
-        {expanded.experience && (
+        {activeSections.experience && (
           <div className="filter-options">
-            <label className="filter-option">
-              <input
-                type="radio"
-                name="experience"
-                value=""
-                checked={filters.experience === ""}
-                onChange={() => handleFilterChange("experience", "")}
-              />
-              All
-            </label>
-            <label className="filter-option">
-              <input
-                type="radio"
-                name="experience"
-                value="5"
-                checked={filters.experience === "5"}
-                onChange={() => handleFilterChange("experience", "5")}
-              />
-              5+ Years
-            </label>
-            <label className="filter-option">
-              <input
-                type="radio"
-                name="experience"
-                value="10"
-                checked={filters.experience === "10"}
-                onChange={() => handleFilterChange("experience", "10")}
-              />
-              10+ Years
-            </label>
-            <label className="filter-option">
-              <input
-                type="radio"
-                name="experience"
-                value="15"
-                checked={filters.experience === "15"}
-                onChange={() => handleFilterChange("experience", "15")}
-              />
-              15+ Years
-            </label>
+            <select
+              value={filters.experience || ""}
+              onChange={(e) => handleFilterChange("experience", e.target.value)}
+              aria-label="Select doctor experience"
+            >
+              <option value="">Any</option>
+              <option value="5">5+ years</option>
+              <option value="10">10+ years</option>
+              <option value="15">15+ years</option>
+              <option value="20">20+ years</option>
+            </select>
           </div>
         )}
       </div>
 
       {/* Availability Filter */}
       <div className="filter-section">
-        <div className="filter-header" onClick={() => toggleSection("availability")}>
-          <h3 className="filter-title">Availability</h3>
-          {expanded.availability ? <FaChevronUp /> : <FaChevronDown />}
+        <div
+          className="filter-section-header"
+          onClick={() => toggleSection("availability")}
+          aria-expanded={activeSections.availability}
+        >
+          <h4>Availability</h4>
+          {activeSections.availability ? <FaChevronUp /> : <FaChevronDown />}
         </div>
-
-        {expanded.availability && (
+        {activeSections.availability && (
           <div className="filter-options">
-            <label className="filter-option">
+            <label>
               <input
-                type="radio"
-                name="availability"
-                value=""
-                checked={filters.availability === ""}
-                onChange={() => handleFilterChange("availability", "")}
+                type="checkbox"
+                checked={filters.availability === "today"}
+                onChange={() =>
+                  handleFilterChange("availability", filters.availability === "today" ? "" : "today")
+                }
               />
-              All
-            </label>
-            <label className="filter-option">
-              <input
-                type="radio"
-                name="availability"
-                value="online"
-                checked={filters.availability === "online"}
-                onChange={() => handleFilterChange("availability", "online")}
-              />
-              Online Consultation
-            </label>
-            <label className="filter-option">
-              <input
-                type="radio"
-                name="availability"
-                value="clinic"
-                checked={filters.availability === "clinic"}
-                onChange={() => handleFilterChange("availability", "clinic")}
-              />
-              Clinic Visit
-            </label>
-            <label className="filter-option">
-              <input
-                type="radio"
-                name="availability"
-                value="hospital"
-                checked={filters.availability === "hospital"}
-                onChange={() => handleFilterChange("availability", "hospital")}
-              />
-              Hospital Visit
+              Available Today
             </label>
           </div>
         )}
       </div>
 
-      {/* Sort By Filter */}
+      {/* Sort Options */}
       <div className="filter-section">
-        <div className="filter-header" onClick={() => toggleSection("sortBy")}>
-          <h3 className="filter-title">Sort By</h3>
-          {expanded.sortBy ? <FaChevronUp /> : <FaChevronDown />}
+        <div
+          className="filter-section-header"
+          onClick={() => toggleSection("sort")}
+          aria-expanded={activeSections.sort}
+        >
+          <h4>Sort By</h4>
+          {activeSections.sort ? <FaChevronUp /> : <FaChevronDown />}
         </div>
-
-        {expanded.sortBy && (
+        {activeSections.sort && (
           <div className="filter-options">
-            <label className="filter-option">
-              <input
-                type="radio"
-                name="sortBy"
-                value="rating"
-                checked={filters.sortBy === "rating"}
-                onChange={() => handleFilterChange("sortBy", "rating")}
-              />
-              Rating
-            </label>
-            <label className="filter-option">
-              <input
-                type="radio"
-                name="sortBy"
-                value="experience"
-                checked={filters.sortBy === "experience"}
-                onChange={() => handleFilterChange("sortBy", "experience")}
-              />
-              Experience
-            </label>
-            <label className="filter-option">
-              <input
-                type="radio"
-                name="sortBy"
-                value="consultationFee"
-                checked={filters.sortBy === "consultationFee"}
-                onChange={() => handleFilterChange("sortBy", "consultationFee")}
-              />
-              Consultation Fee
-            </label>
+            <div className="sort-option">
+              <select
+                value={filters.sortBy}
+                onChange={(e) => handleFilterChange("sortBy", e.target.value)}
+                aria-label="Select sort criteria"
+              >
+                <option value="rating">Rating</option>
+                <option value="experience">Experience</option>
+                <option value="price">Price</option>
+              </select>
+            </div>
+            <div className="sort-order">
+              <label>
+                <input
+                  type="radio"
+                  name="sortOrder"
+                  checked={filters.sortOrder === "asc"}
+                  onChange={() => handleFilterChange("sortOrder", "asc")}
+                />
+                Ascending
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="sortOrder"
+                  checked={filters.sortOrder === "desc"}
+                  onChange={() => handleFilterChange("sortOrder", "desc")}
+                />
+                Descending
+              </label>
+            </div>
           </div>
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default DoctorFilters
+export default DoctorFilters;

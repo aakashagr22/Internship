@@ -1,145 +1,178 @@
+// filepath: c:\Users\aakas\Downloads\Redux\doc\doc3\onlineconsult\pages\specialties\[specialty].js
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/router"
+import { useState, useEffect, useCallback } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Header from "../../components/Header"
 import DoctorFilters from "../../components/DoctorFilters"
 import DoctorCard from "../../components/DoctorCard"
 import Pagination from "../../components/Pagination"
 import SEO from "../../components/SEO"
-import dbConnect from "../../lib/dbConnect"
-import Doctor from "../../models/Doctor"
-
-// Helper function to format specialty for display
-function formatSpecialty(specialty) {
-  return specialty
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ")
-}
-
-// Generate structured data for SEO
-function generateStructuredData(doctors, specialty, baseUrl) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "MedicalBusiness",
-    name: `Apollo 247 - ${formatSpecialty(specialty)} Doctors`,
-    description: `Find and consult with the best ${formatSpecialty(specialty)} doctors online or in-clinic.`,
-    url: `${baseUrl}/specialties/${specialty}`,
-    logo: `${baseUrl}/images/logo/apollo-247-logo.png`,
-    medicalSpecialty: formatSpecialty(specialty),
-    availableService: doctors.map((doctor) => ({
-      "@type": "MedicalProcedure",
-      name: "Medical Consultation",
-      provider: {
-        "@type": "Physician",
-        name: doctor.name,
-        medicalSpecialty: doctor.specialty,
-        image: doctor.imageUrl,
-      },
-    })),
-  }
-}
+import { fetchDoctors } from "../../services/doctorService" // New service import
+import { formatSpecialty, generateStructuredData } from "../../utils/specialtyUtils" // Extracted helpers
 
 export default function SpecialtyPage({ initialDoctors, pagination, specialty }) {
   const router = useRouter()
-  const { query } = router
-  const [doctors, setDoctors] = useState(initialDoctors)
-  const [paginationData, setPaginationData] = useState(pagination)
+  const searchParams = useSearchParams()
+
+  const [doctors, setDoctors] = useState([])
+  const [paginationData, setPaginationData] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0,
+  })
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
-  const formattedSpecialty = formatSpecialty(specialty)
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://apollo247clone.vercel.app"
-  const canonicalUrl = `${baseUrl}/specialties/${specialty}`
+  const currentPage = Number.parseInt(searchParams.get('page')) || 1
+  const specialtyName = specialty || "General Physician & Internal Medicine" // Provide a default
 
-  // Generate structured data
-  const structuredData = generateStructuredData(doctors, specialty, baseUrl)
-
-  // Fetch doctors when query params change
-  useEffect(() => {
+  const fetchDoctorData = useCallback(async () => {
     if (!router.isReady) return
 
-    const fetchDoctors = async () => {
+    try {
       setLoading(true)
-      try {
-        // Build query string from router query
-        const queryParams = new URLSearchParams()
-        Object.entries(query).forEach(([key, value]) => {
-          if (value && key !== "specialty") {
-            queryParams.append(key, value)
-          }
-        })
-        queryParams.append("specialty", specialty)
+      setError(null)
 
-        const res = await fetch(`/api/doctors?${queryParams.toString()}`)
-        const data = await res.json()
+      const queryParams = {
+        specialty: specialtyName,
+        page: currentPage,
+        limit: 10,
+        gender: searchParams.get('gender') || '',
+        experience: searchParams.get('experience') || '',
+        availability: searchParams.get('availability') || '',
+        sortBy: searchParams.get('sortBy') || "rating",
+        sortOrder: searchParams.get('sortOrder') || "desc",
+      }
 
-        if (data.success) {
-          setDoctors(data.data)
-          setPaginationData(data.pagination)
-        }
-      } catch (error) {
-        console.error("Error fetching doctors:", error)
-      } finally {
-        setLoading(false)
+      const { data, pagination } = await fetchDoctors(queryParams)
+
+      setDoctors(data)
+      setPaginationData(pagination)
+    } catch (err) {
+      setError(err.message)
+      console.error("Error fetching doctors:", err)
+    } finally {
+      setLoading(false)
+    }
+  }, [router.isReady, searchParams, currentPage, specialtyName])
+
+  useEffect(() => {
+    fetchDoctorData()
+  }, [fetchDoctorData])
+
+  const handlePageChange = useCallback((page) => {
+    // Safely get the current pathname
+    const pathname = router.pathname || `/specialties/${specialtyName.toLowerCase().replace(/ /g, '-')}`;
+
+    // Create a new URLSearchParams object from the current search parameters
+    const params = new URLSearchParams(searchParams?.toString());
+
+    // Set the new page number
+    params.set('page', page.toString());
+
+    // Construct the new URL
+    const newUrl = `${pathname}?${params.toString()}`;
+
+    // Push the new URL
+    router.push(newUrl, { shallow: true });
+  }, [router, searchParams, specialtyName]);
+
+  const handleFilterChange = useCallback((newFilters) => {
+    // Safely get the current pathname
+    const pathname = router.pathname || `/specialties/${specialtyName.toLowerCase().replace(/ /g, '-')}`;
+
+    // Create a new URLSearchParams object
+    const params = new URLSearchParams();
+
+    // Add the new filters
+    for (const key in newFilters) {
+      if (newFilters[key]) {
+        params.set(key, newFilters[key]);
       }
     }
 
-    fetchDoctors()
-  }, [router.isReady, query, specialty])
+    // Reset the page number
+    params.set('page', '1');
 
-  // Get current page from URL or default to 1
-  const currentPage = Number.parseInt(query.page) || 1
+    // Construct the new URL
+    const newUrl = `${pathname}?${params.toString()}`;
+
+    // Push the new URL
+    router.push(newUrl, { shallow: true });
+  }, [router, specialtyName]);
 
   return (
     <>
       <SEO
-        title={`${formattedSpecialty} Doctors | Apollo 247 Clone`}
-        description={`Find and consult with the best ${formattedSpecialty} doctors online or in-clinic. Book appointments, view doctor profiles, and more.`}
-        canonical={canonicalUrl}
-        structuredData={structuredData}
-        specialty={formattedSpecialty}
+        title={`${formatSpecialty(specialtyName)} Doctors | Apollo 247 Clone`}
+        description={`Book appointments with top ${formatSpecialty(specialtyName)} specialists. Find experienced doctors near you.`}
+        canonical={`${process.env.NEXT_PUBLIC_BASE_URL}/specialties/${specialtyName.toLowerCase().replace(/ /g, '-')}`}
+        specialty={specialtyName}
       />
 
       <Header />
 
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">{formattedSpecialty}</h1>
-          <p className="text-gray-600">Find experienced doctors and book appointments online</p>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">{formatSpecialty(specialtyName)}</h1>
+          <p className="text-lg text-gray-600 mt-2">
+            Find and book appointments with qualified specialists
+          </p>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Filters sidebar */}
-          <div className="md:w-1/4">
-            <DoctorFilters />
+        <div className="flex flex-col lg:flex-row gap-8">
+          <div className="lg:w-1/4">
+            <DoctorFilters onFilterChange={handleFilterChange} />
           </div>
 
-          {/* Doctors listing */}
-          <div className="md:w-3/4">
-            <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-              <p className="text-gray-600">
-                {paginationData.total} doctors found for {formattedSpecialty}
-              </p>
-            </div>
-
+          <div className="lg:w-3/4">
             {loading ? (
-              <div className="bg-white rounded-lg shadow-md p-8 flex justify-center items-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600"></div>
+              <div className="flex justify-center items-center h-48">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
               </div>
-            ) : doctors.length > 0 ? (
-              <>
-                {doctors.map((doctor) => (
-                  <DoctorCard key={doctor._id} doctor={doctor} />
-                ))}
-
-                <Pagination currentPage={currentPage} totalPages={paginationData.pages} />
-              </>
+            ) : error ? (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <strong className="font-bold">Error!</strong>
+                <span className="block sm:inline">{error}</span>
+              </div>
             ) : (
-              <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                <p className="text-lg">No doctors found matching your criteria.</p>
-                <p className="text-gray-600 mt-2">Try adjusting your filters to see more results.</p>
-              </div>
+              <>
+                {doctors.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-48">
+                    <svg
+                      className="h-12 w-12 text-gray-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <h3 className="mt-2 text-lg font-medium text-gray-900">No doctors found</h3>
+                    <p className="mt-1 text-gray-500">
+                      Try adjusting your search or filter to find what you're looking for.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {doctors.map((doctor) => (
+                      <DoctorCard key={doctor.id} doctor={doctor} />
+                    ))}
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={paginationData.totalPages}
+                      onPageChange={handlePageChange}
+                    />
+                  </>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -148,67 +181,53 @@ export default function SpecialtyPage({ initialDoctors, pagination, specialty })
   )
 }
 
-// Server-side rendering to fetch initial doctors
+// Server-side rendering remains the same
 export async function getServerSideProps({ params, query }) {
-  const { specialty } = params
-  const page = query.page || 1
-  const limit = query.limit || 10
-
-  await dbConnect()
-
-  // Build query
-  const dbQuery = { specialty: formatSpecialty(specialty) }
-
-  // Optional filters
-  if (query.gender) dbQuery.gender = query.gender
-  if (query.experience) dbQuery.experience = { $gte: Number.parseInt(query.experience) }
-  if (query.availability) {
-    if (query.availability === "online") dbQuery["availability.online"] = true
-    if (query.availability === "clinic") dbQuery["availability.clinic"] = true
-    if (query.availability === "hospital") dbQuery["availability.hospital"] = true
-  }
-
-  // Sorting
-  const sortBy = query.sortBy || "rating"
-  const sortOrder = query.sortOrder === "asc" ? 1 : -1
-  const sort = {}
-  sort[sortBy] = sortOrder
-
-  // Pagination
-  const skip = (Number.parseInt(page) - 1) * Number.parseInt(limit)
+  const { specialty } = params;
 
   try {
-    // Execute query
-    const doctors = await Doctor.find(dbQuery).sort(sort).skip(skip).limit(Number.parseInt(limit)).lean()
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const apiUrl = `${baseUrl}/api/doctors`;
 
-    // Get total count for pagination
-    const total = await Doctor.countDocuments(dbQuery)
+    const queryParams = {
+      specialty,
+      page: query.page || 1,
+      limit: query.limit || 10,
+      gender: query.gender || '',
+      experience: query.experience || '',
+      availability: query.availability || '',
+      sortBy: query.sortBy || "rating",
+      sortOrder: query.sortOrder || "desc",
+    };
+
+    const response = await fetch(`${apiUrl}?${new URLSearchParams(queryParams)}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch doctors: ${response.status} ${response.statusText}`);
+    }
+
+    const { data, pagination } = await response.json();
 
     return {
       props: {
-        initialDoctors: JSON.parse(JSON.stringify(doctors)),
-        pagination: {
-          total,
-          page: Number.parseInt(page),
-          limit: Number.parseInt(limit),
-          pages: Math.ceil(total / Number.parseInt(limit)),
-        },
+        initialDoctors: data,
+        pagination,
         specialty,
       },
-    }
+    };
   } catch (error) {
-    console.error("Error fetching initial doctors:", error)
+    console.error("Error in getServerSideProps:", error);
     return {
       props: {
         initialDoctors: [],
         pagination: {
           total: 0,
-          page: Number.parseInt(page),
-          limit: Number.parseInt(limit),
-          pages: 0,
+          page: 1,
+          limit: 10,
+          totalPages: 0,
         },
         specialty,
       },
-    }
+    };
   }
 }

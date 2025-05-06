@@ -87,7 +87,7 @@ const doctorData = [
     },
     rating: 4.5,
     reviewCount: 156,
-    imageUrl: "/images/doctors/doctor-4.png",
+    imageUrl: "/images/doctors/female-doctor-1.jpg",
     location: "Hyderabad",
     hospital: "Apollo Health City",
     nextAvailableSlot: new Date(Date.now() + 14400000).toISOString(), // 4 hours from now
