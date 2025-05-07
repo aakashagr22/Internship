@@ -47,40 +47,42 @@ const DoctorFilters = ({ onFilterChange }) => {
     onFilterChange?.(filters);
   }, [filters, onFilterChange]);
 
-  const handleFilterChange = useCallback(
-    (key, value) => {
-      setFilters((prevFilters) => {
-        const newFilters = {
-          ...prevFilters,
-          [key]: value,
-        };
-
+  const handleFilterChange = useCallback((key, value) => {
+    setFilters((prevFilters) => {
+      const newFilters = {
+        ...prevFilters,
+        [key]: value
+      };
+  
+      // Safely construct the URL
+      try {
+        // Get current pathname safely (use window.location if router.pathname is undefined)
+        const pathname = window.location.pathname || "/specialties/general-physician-internal-medicine";
+        
+        // Create URLSearchParams from the new filters
+        const params = new URLSearchParams();
+        Object.entries(newFilters).forEach(([k, v]) => {
+          if (v !== undefined && v !== null && v !== "") {
+            params.set(k, v);
+          }
+        });
+  
         // Construct the new URL
-        const newQuery = Object.entries(newFilters)
-          .filter(([, value]) => value !== "") // Remove empty values
-          .map(([key, value]) => `${key}=${value}`)
-          .join("&");
-
-        // Safely get the current pathname
-        const pathname = router.pathname || "/specialties/general-physician-internal-medicine"; // Provide a default
-
-        const newUrl = `${pathname}?${newQuery}`;
-
-        try {
-          router.push(newUrl, {
-            scroll: false,
-            shallow: true,
-          });
-        } catch (error) {
-          console.error("Navigation error:", error);
+        const newUrl = `${pathname}?${params.toString()}`;
+        
+        // Validate URL before navigation
+        if (typeof newUrl === 'string' && newUrl.length > 0) {
+          router.push(newUrl, { scroll: false, shallow: true });
+        } else {
+          console.error('Invalid URL generated:', newUrl);
         }
-
-        return newFilters; // Update the state
-      });
-    },
-    [router]
-  );
-
+      } catch (error) {
+        console.error("Navigation error:", error);
+      }
+  
+      return newFilters;
+    });
+  }, [router]);
   return (
     <div className="doctor-filters">
       <div className="filter-header">

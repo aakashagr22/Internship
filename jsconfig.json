@@ -28,7 +28,7 @@
     "**/*.js",
     "**/*.jsx",
     "next-env.d.ts"
-  ],
+, "next.config.js"  ],
   "exclude": [
     "node_modules"
   ]

@@ -1,3 +1,4 @@
+// next.config.js
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
@@ -11,8 +12,8 @@ const nextConfig = {
     unoptimized: true,
   },
   env: {
-    NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL || "https://apollo247clone.vercel.app",
+    NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL || "https://onlineconsultt.onrender.com",
   },
-}
+};
 
-module.exports = nextConfig
+export default nextConfig;

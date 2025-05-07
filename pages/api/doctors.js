@@ -1,143 +1,144 @@
-import dbConnect from "../../../lib/dbConnect";
-import Doctor from "../../../models/Doctor";
-import { validateDoctorData, validateFilters } from "../../../utils/validation";
+// pages/api/doctors/route.js
+import dbConnect from "@/lib/dbConnect";
+import Doctor from "@/models/Doctor";
+import { NextResponse } from "next/server";
 
-// Constants for default values
-const DEFAULT_PAGE = 1;
-const DEFAULT_LIMIT = 10;
-const DEFAULT_SORT = "rating";
-const DEFAULT_ORDER = "desc";
-const DEFAULT_SPECIALTY = "General Physician & Internal Medicine";
+// Default configuration
+const DEFAULTS = {
+  PAGE: 1,
+  LIMIT: 10,
+  SORT: "rating",
+  ORDER: "desc",
+  SPECIALTY: "General Physician & Internal Medicine"
+};
 
-export default async function handler(req, res) {
-  const { method } = req;
-
-  // Connect to database
+export async function GET(request) {
   try {
+    // Debug connection
+    console.log("Connecting to database...");
     await dbConnect();
-  } catch (error) {
-    console.error("Database connection error:", error);
-    return res.status(500).json({
-      success: false,
-      error: "Database connection failed",
-    });
-  }
+    console.log("Database connected successfully");
 
-  try {
-    switch (method) {
-      case "GET":
-        // Destructure query parameters
-        const {
-          specialty = DEFAULT_SPECIALTY,
-          rating,
-          experience,
-          availability,
-          gender,
-          page = DEFAULT_PAGE,
-          limit = DEFAULT_LIMIT,
-          sortBy = DEFAULT_SORT,
-          sortOrder = DEFAULT_ORDER,
-        } = req.query;
+    const { searchParams } = new URL(request.url);
+    
+    // Parse query parameters with defaults
+    const queryParams = {
+      specialty: searchParams.get('specialty') || DEFAULTS.SPECIALTY,
+      rating: searchParams.get('rating'),
+      experience: searchParams.get('experience'),
+      availability: searchParams.get('availability'),
+      gender: searchParams.get('gender'),
+      page: Number(searchParams.get('page')) || DEFAULTS.PAGE,
+      limit: Number(searchParams.get('limit')) || DEFAULTS.LIMIT,
+      sortBy: searchParams.get('sortBy') || DEFAULTS.SORT,
+      sortOrder: searchParams.get('sortOrder') || DEFAULTS.ORDER
+    };
 
-        // Validate filters
-        const filterError = validateFilters({
-          rating,
-          experience,
-          availability,
-          gender,
-          page,
-          limit,
-        });
-        if (filterError) {
-          return res.status(400).json({
-            success: false,
-            error: filterError,
-          });
-        }
+    console.log("Query parameters:", queryParams);
 
-        // Build query
-        const query = { specialty };
-        
-        // Apply filters
-        if (rating) query.rating = { $gte: Number(rating) };
-        if (experience) query.experience = { $gte: Number(experience) };
-        if (gender) query.gender = gender;
-        if (availability) query[`availability.${availability}`] = true;
-
-        // Execute query with pagination
-        const [doctors, total] = await Promise.all([
-          Doctor.find(query)
-            .sort({ [sortBy]: sortOrder === "asc" ? 1 : -1 })
-            .skip((Number(page) - 1) * Number(limit))
-            .limit(Number(limit))
-            .lean(), // Use lean() for better performance
-          Doctor.countDocuments(query),
-        ]);
-
-        return res.status(200).json({
-          success: true,
-          data: doctors,
-          pagination: {
-            total,
-            page: Number(page),
-            limit: Number(limit),
-            totalPages: Math.ceil(total / Number(limit)),
-          },
-        });
-
-      case "POST":
-        // Validate request body
-        const validationError = validateDoctorData(req.body);
-        if (validationError) {
-          return res.status(400).json({
-            success: false,
-            error: validationError,
-          });
-        }
-
-        // Create new doctor
-        const doctor = await Doctor.create(req.body);
-        
-        // Return 201 Created status
-        return res.status(201).json({
-          success: true,
-          data: doctor.toObject(), // Convert to plain JavaScript object
-        });
-
-      default:
-        // Handle unsupported methods
-        res.setHeader("Allow", ["GET", "POST"]);
-        return res.status(405).json({
-          success: false,
-          error: `Method ${method} not allowed`,
-        });
+    // Build query
+    const query = { specialty: queryParams.specialty };
+    
+    // Apply filters
+    if (queryParams.rating) query.rating = { $gte: Number(queryParams.rating) };
+    if (queryParams.experience) query.experience = { $gte: Number(queryParams.experience) };
+    if (queryParams.gender) query.gender = queryParams.gender;
+    if (queryParams.availability) {
+      query[`availability.${queryParams.availability}`] = true;
     }
+
+    console.log("Final query:", JSON.stringify(query, null, 2));
+
+    // Execute query
+    const [doctors, total] = await Promise.all([
+      Doctor.find(query)
+        .sort({ [queryParams.sortBy]: queryParams.sortOrder === "asc" ? 1 : -1 })
+        .skip((queryParams.page - 1) * queryParams.limit)
+        .limit(queryParams.limit)
+        .lean(),
+      Doctor.countDocuments(query)
+    ]);
+
+    console.log(`Found ${doctors.length} doctors out of ${total}`);
+
+    if (doctors.length === 0) {
+      console.warn("No doctors found matching query");
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: doctors,
+      pagination: {
+        total,
+        page: queryParams.page,
+        limit: queryParams.limit,
+        totalPages: Math.ceil(total / queryParams.limit),
+      },
+    });
+    
   } catch (error) {
     console.error("API Error:", error);
     
-    // Handle duplicate key errors (e.g., unique fields)
-    if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        error: "Duplicate field value entered",
-        details: error.keyValue,
-      });
-    }
+    return NextResponse.json({
+      success: false,
+      error: error.message || "Server Error",
+      ...(process.env.NODE_ENV === 'development' && {
+        stack: error.stack,
+        fullError: JSON.stringify(error)
+      })
+    }, { 
+      status: error.statusCode || 500 
+    });
+  }
+}
+
+export async function POST(request) {
+  try {
+    console.log("Connecting to database for POST...");
+    await dbConnect();
     
-    // Handle validation errors
-    if (error.name === "ValidationError") {
-      const messages = Object.values(error.errors).map(val => val.message);
-      return res.status(400).json({
+    const body = await request.json();
+    console.log("Received POST data:", body);
+
+    // Validate required fields
+    const requiredFields = ['name', 'specialty'];
+    const missingFields = requiredFields.filter(field => !body[field]);
+    
+    if (missingFields.length > 0) {
+      return NextResponse.json({
         success: false,
-        error: "Validation error",
-        details: messages,
-      });
+        error: `Missing required fields: ${missingFields.join(', ')}`
+      }, { status: 400 });
     }
 
-    // Generic server error
-    return res.status(500).json({
+    // Create new doctor
+    const doctor = await Doctor.create(body);
+    console.log("Created new doctor:", doctor._id);
+    
+    return NextResponse.json({
+      success: true,
+      data: doctor.toObject()
+    }, { status: 201 });
+    
+  } catch (error) {
+    console.error("POST Error:", error);
+    
+    // Enhanced error responses
+    let status = 500;
+    let errorMessage = "Server Error";
+    
+    if (error.name === 'ValidationError') {
+      status = 400;
+      errorMessage = Object.values(error.errors).map(err => err.message).join(', ');
+    } else if (error.code === 11000) {
+      status = 409;
+      errorMessage = "Duplicate entry";
+    }
+    
+    return NextResponse.json({
       success: false,
-      error: "Server Error",
-    });
+      error: errorMessage,
+      ...(process.env.NODE_ENV === 'development' && { details: error.message })
+    }, { status });
   }
 }

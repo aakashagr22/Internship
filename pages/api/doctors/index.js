@@ -1,6 +1,6 @@
 import dbConnect from "../../../lib/dbConnect";
 import Doctor from "../../../models/Doctor";
-import { validateDoctorData } from "../../../utils/validation";
+import { validateDoctorData } from "../../utils/validation";
 
 export default async function handler(req, res) {
   const { method } = req;
